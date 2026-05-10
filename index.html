@@ -398,7 +398,7 @@ async function analyze() {
       fetchJSON(`${BASE_F}/futures/data/openInterestHist?symbol=${sym}&period=15m&limit=4`),
       fetchJSON(`${BASE_F}/futures/data/globalLongShortAccountRatio?symbol=${sym}&period=1h&limit=1`).catch(()=>null),
       fetchJSON(`${BASE_F}/fapi/v1/fundingRate?symbol=${sym}&limit=3`),
-      fetchJSON(`${BASE_F}/futures/data/takerBuySellVol?symbol=${sym}&period=5m&limit=3`).catch(()=>null),
+      fetchJSON(`${BASE_F}/fapi/v1/klines?symbol=${sym}&interval=5m&limit=5`).catch(()=>null),
       fetchJSON(`${BASE_S}/api/v3/klines?symbol=${sym}&interval=5m&limit=4`).catch(()=>null),
     ]);
 
@@ -437,12 +437,13 @@ async function analyze() {
     }
     const frNow = frRates[frRates.length-1] || 0;
 
-    // Taker futures（檢查是否為有效 list）
+    // Taker futures：從 fapi/v1/klines index[9] 計算（避免 CORS 問題）
     let tkFut = null;
-    if (takerFut && Array.isArray(takerFut) && takerFut.length > 0) {
-      tkFut = takerFut.map(d=>{
-        const b=parseFloat(d.buyVol)||0, s=parseFloat(d.sellVol)||0;
-        return b+s>0 ? b/(b+s) : 0.5;
+    if (takerFut && Array.isArray(takerFut) && takerFut.length > 1) {
+      const completed = takerFut.slice(0,-1).slice(-3);
+      tkFut = completed.map(k=>{
+        const tv=parseFloat(k[5])||0, tb=parseFloat(k[9])||0;
+        return tv>0 ? tb/tv : 0.5;
       });
     }
 
