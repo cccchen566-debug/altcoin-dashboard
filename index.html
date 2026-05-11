@@ -125,6 +125,7 @@ letter-spacing: -0.01em;
 .pos { color: var(--green); }
 .neg { color: var(--red); }
 .neutral { color: var(--muted); }
+.amber { color: var(--amber); }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem; }
 .metric {
 background: var(--surface2);
@@ -147,36 +148,6 @@ letter-spacing: 0.1em;
 text-transform: uppercase;
 margin: 1rem 0 0.5rem;
 }
-.signal-row {
-display: flex;
-align-items: center;
-gap: 0.5rem;
-padding: 0.5rem 0;
-border-bottom: 1px solid var(--border);
-font-size: 13px;
-}
-.signal-row:last-child { border-bottom: none; }
-.dot {
-width: 6px; height: 6px;
-border-radius: 50%;
-flex-shrink: 0;
-}
-.dot-green { background: var(--green); }
-.dot-red { background: var(--red); }
-.dot-amber { background: var(--amber); }
-.dot-muted { background: var(--muted); }
-.badge {
-display: inline-block;
-padding: 2px 8px;
-border-radius: 4px;
-font-size: 11px;
-font-weight: 500;
-letter-spacing: 0.05em;
-}
-.badge-bull { background: rgba(45,206,137,0.15); color: var(--green); }
-.badge-bear { background: rgba(244,67,54,0.15); color: var(--red); }
-.badge-warn { background: rgba(255,183,77,0.15); color: var(--amber); }
-.badge-neutral { background: rgba(107,107,138,0.2); color: var(--muted); }
 .taker-bar {
 height: 6px;
 border-radius: 3px;
@@ -195,6 +166,7 @@ display: flex;
 gap: 0.4rem;
 align-items: center;
 margin-top: 0.4rem;
+flex-wrap: wrap;
 }
 .fr-pill {
 padding: 2px 8px;
@@ -242,6 +214,16 @@ padding: 2rem;
 color: var(--red);
 font-size: 13px;
 }
+.warn-banner {
+background: rgba(255,183,77,0.08);
+border: 1px solid rgba(255,183,77,0.25);
+border-radius: 8px;
+padding: 0.5rem 0.75rem;
+margin-bottom: 0.75rem;
+font-size: 12px;
+color: var(--amber);
+font-family: system-ui, sans-serif;
+}
 footer {
 margin-top: 2rem;
 text-align: center;
@@ -272,7 +254,7 @@ letter-spacing: 0.05em;
 <footer>
 資料來源：Binance Futures API &nbsp;·&nbsp; 每次查詢即時抓取
 &nbsp;·&nbsp; <a href="#" onclick="testConn();return false;" style="color:var(--accent);text-decoration:none;">連線測試</a>
-&nbsp;·&nbsp; <span class="version">v2.1.1</span>
+&nbsp;·&nbsp; <span class="version">v2.1.2</span>
 </footer>
 </div>
 
@@ -307,6 +289,14 @@ if (!r.ok) throw new Error(`HTTP ${r.status}`);
 return r.json();
 }
 
+// v2.1.2：每個請求都用 safeFetch 包裝，失敗回 null 並 log，避免 Promise.all 一掛全掛
+function safeFetch(url, label) {
+return fetchJSON(url).catch(e => {
+console.error(`[${label}]`, e.message);
+return null;
+});
+}
+
 function calcADX(klines, period=14) {
 if (klines.length < period*2) return 0;
 const highs = klines.map(k=>parseFloat(k[2]));
@@ -333,7 +323,7 @@ for(let i=period;i<dx.length;i++) adx=(adx*(period-1)+dx[i])/period;
 return Math.round(adx*10)/10;
 }
 
-// 取陣列中最後一個非 null 的值（Taker bar 顯示用）
+// 取陣列最後一個非 null 的值（給 Taker bar 用）
 function lastValid(arr) {
 if (!arr || !arr.length) return null;
 for (let i = arr.length - 1; i >= 0; i--) {
@@ -347,14 +337,20 @@ const {adx, oi_chg, ls, fr_trend, taker_fut, taker_spot, vol_ratio, chg} = data;
 const signals = [];
 const risks = [];
 
+if (adx !== null) {
 if (adx >= 25) signals.push('趨勢強勁（ADX ' + adx + '）');
 else if (adx < 15) risks.push('ADX 過低，盤整行情');
+}
 
+if (oi_chg !== null) {
 if (oi_chg > 15 && chg > 0) signals.push('OI 上升配合價格上漲');
 if (oi_chg > 15 && chg < 0) risks.push('OI 上升但價格下跌（空頭主導）');
+}
 
-if (ls && ls < 0.5 && oi_chg > 10) signals.push('多空比偏空 + OI 流入（逼空）');
-if (ls && ls > 2.0 && oi_chg > 10) risks.push('散戶極端追多，留意反轉');
+if (ls !== null && oi_chg !== null) {
+if (ls < 0.5 && oi_chg > 10) signals.push('多空比偏空 + OI 流入（逼空）');
+if (ls > 2.0 && oi_chg > 10) risks.push('散戶極端追多，留意反轉');
+}
 
 if (fr_trend === '📈 上升') risks.push('資金費率快速上升，做多擁擠');
 if (fr_trend === '📉 下降') signals.push('資金費率下降，空方增加');
@@ -365,7 +361,7 @@ const lastTkSpot = lastValid(taker_spot);
 if (lastTkFut !== null && lastTkFut < 0.4) risks.push('合約 Taker 賣壓增加');
 if (lastTkSpot !== null && lastTkSpot > 0.6 && lastTkFut !== null && lastTkFut > 0.6) signals.push('現貨+合約雙向買盤');
 
-if (vol_ratio > 20) signals.push('極端放量（' + vol_ratio.toFixed(1) + 'x）');
+if (vol_ratio !== null && vol_ratio > 20) signals.push('極端放量（' + vol_ratio.toFixed(1) + 'x）');
 
 if (!signals.length && !risks.length) return '指標混合，無明顯方向訊號。';
 
@@ -379,12 +375,11 @@ async function analyze() {
 let raw = document.getElementById('symInput').value.trim().toUpperCase();
 if (!raw) return;
 
-// 去掉已有的後綴，避免 INXUSDT → INXUSDTUSDT
+// 去掉 USDT/USDC/BUSD 後綴，避免重複加
 raw = raw.replace(/USDT$|USDC$|BUSD$/, '');
 if (!raw) return;
 
-// 自動處理：避免重複加 USDT
-const sym = raw.endsWith('USDT') || raw.endsWith('USDC') ? raw : raw + 'USDT';
+const sym = raw + 'USDT';
 
 const btn = document.getElementById('analyzeBtn');
 btn.disabled = true;
@@ -396,66 +391,82 @@ try {
 const BASE_F = 'https://fapi.binance.com';
 const BASE_S = 'https://api.binance.com';
 
+// v2.1.2：全部 8 個請求都包 safeFetch，個別失敗回 null 不影響其他
 const [ticker, klines15m, klines1h, oiHist, lsData, frHist, takerFut, takerSpot] = await Promise.all([
-fetchJSON(`${BASE_F}/fapi/v1/ticker/24hr?symbol=${sym}`),
-fetchJSON(`${BASE_F}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=674`),
-fetchJSON(`${BASE_F}/fapi/v1/klines?symbol=${sym}&interval=1h&limit=50`),
-fetchJSON(`${BASE_F}/futures/data/openInterestHist?symbol=${sym}&period=15m&limit=4`),
-fetchJSON(`${BASE_F}/futures/data/globalLongShortAccountRatio?symbol=${sym}&period=1h&limit=1`).catch(e=>{ console.error('[lsData]', e.message); return null; }),
-fetchJSON(`${BASE_F}/fapi/v1/fundingRate?symbol=${sym}&limit=3`),
-// v2.1.1: 改用 takerlongshortRatio 正規 endpoint，取代以 klines index[9] 計算的繞道
-fetchJSON(`${BASE_F}/futures/data/takerlongshortRatio?symbol=${sym}&period=5m&limit=4`).catch(e=>{ console.error('[takerFut]', e.message); return null; }),
-fetchJSON(`${BASE_S}/api/v3/klines?symbol=${sym}&interval=5m&limit=4`).catch(e=>{ console.error('[takerSpot]', e.message); return null; }),
+safeFetch(`${BASE_F}/fapi/v1/ticker/24hr?symbol=${sym}`, 'ticker'),
+safeFetch(`${BASE_F}/fapi/v1/klines?symbol=${sym}&interval=15m&limit=674`, 'klines15m'),
+safeFetch(`${BASE_F}/fapi/v1/klines?symbol=${sym}&interval=1h&limit=50`, 'klines1h'),
+safeFetch(`${BASE_F}/futures/data/openInterestHist?symbol=${sym}&period=15m&limit=4`, 'oiHist'),
+safeFetch(`${BASE_F}/futures/data/globalLongShortAccountRatio?symbol=${sym}&period=1h&limit=1`, 'lsData'),
+safeFetch(`${BASE_F}/fapi/v1/fundingRate?symbol=${sym}&limit=3`, 'frHist'),
+safeFetch(`${BASE_F}/futures/data/takerlongshortRatio?symbol=${sym}&period=5m&limit=4`, 'takerFut'),
+safeFetch(`${BASE_S}/api/v3/klines?symbol=${sym}&interval=5m&limit=4`, 'takerSpot'),
 ]);
 
+// ticker 是必要欄位，沒有就無法繼續
+if (!ticker) {
+throw new Error(`找不到 ${raw}/USDT 合約。請確認幣種拼字正確，且幣安有此 U 本位永續合約`);
+}
+
+// 計算各指標 — 用 null 表示資料不可用，讓 UI 顯示 N/A
 const price = parseFloat(ticker.lastPrice);
 const chg = parseFloat(ticker.priceChangePercent);
 const vol24h = parseFloat(ticker.quoteVolume);
 
 // Volume ratio (15m)
+let volRatio = null;
+if (klines15m && klines15m.length >= 3) {
 const k15 = klines15m.slice(0,-1);
+if (k15.length >= 2) {
 const curVol = parseFloat(k15[k15.length-1][7]);
 const histVols = k15.slice(0,-1).map(k=>parseFloat(k[7]));
-const avgVol = histVols.reduce((a,b)=>a+b,0)/histVols.length;
-const volRatio = avgVol > 0 ? curVol/avgVol : 0;
+const avgVol = histVols.length ? histVols.reduce((a,b)=>a+b,0)/histVols.length : 0;
+volRatio = avgVol > 0 ? curVol/avgVol : null;
+}
+}
 
 // ADX (1h)
-const adx = calcADX(klines1h.slice(0,-1));
+let adx = null;
+if (klines1h && klines1h.length >= 30) {
+adx = calcADX(klines1h.slice(0,-1));
+}
 
 // OI change
-let oiChg = 0;
-if (oiHist.length >= 2) {
+let oiChg = null;
+if (oiHist && oiHist.length >= 2) {
 const oi1 = parseFloat(oiHist[oiHist.length-1].sumOpenInterest);
 const oi0 = parseFloat(oiHist[oiHist.length-2].sumOpenInterest);
-oiChg = oi0 > 0 ? (oi1-oi0)/oi0*100 : 0;
+oiChg = oi0 > 0 ? (oi1-oi0)/oi0*100 : null;
 }
 
 // Long/short ratio
 const ls = lsData && lsData[0] ? parseFloat(lsData[0].longShortRatio) : null;
 
 // Funding rate history
-const frRates = frHist.map(f=>parseFloat(f.fundingRate)*100);
-let frTrend = '➡️ 持平';
+let frRates = [];
+let frTrend = null;
+if (frHist && frHist.length > 0) {
+frRates = frHist.map(f=>parseFloat(f.fundingRate)*100);
 if (frRates.length >= 2) {
 const d = frRates[frRates.length-1] - frRates[0];
 if (d > 0.002) frTrend = '📈 上升';
 else if (d < -0.002) frTrend = '📉 下降';
+else frTrend = '➡️ 持平';
 }
-const frNow = frRates[frRates.length-1] || 0;
+}
 
-// v2.1.1: Taker futures 改讀 takerlongshortRatio 回傳的 buyVol/sellVol
-// 該 endpoint 回傳全部都是已收盤資料，不用砍最後一根
+// Taker futures (v2.1.1 邏輯：takerlongshortRatio 的 buyVol/sellVol)
 let tkFut = null;
 if (takerFut && Array.isArray(takerFut) && takerFut.length >= 1) {
 tkFut = takerFut.slice(-3).map(d => {
 const buy = parseFloat(d.buyVol) || 0;
 const sell = parseFloat(d.sellVol) || 0;
 const total = buy + sell;
-return total > 0 ? buy / total : null;
+return total > 0 ? buy/total : null;
 });
 }
 
-// Taker spot：volume=0 時改回 null（之前 fallback 0.5 會誤導，看起來像「正好五五波」）
+// Taker spot
 let tkSpot = null;
 if (takerSpot && Array.isArray(takerSpot) && takerSpot.length > 1) {
 tkSpot = takerSpot.slice(0,-1).slice(-3).map(k=>{
@@ -467,13 +478,24 @@ return tv>0 ? tb/tv : null;
 // Verdict
 const verdict = genVerdict({adx, oi_chg: oiChg, ls, fr_trend: frTrend, taker_fut: tkFut, taker_spot: tkSpot, vol_ratio: volRatio, chg});
 
-// Determine signal type
+// Signal type
 let sigType = '';
+if (volRatio !== null && oiChg !== null) {
 if (volRatio >= 20 && Math.abs(oiChg) >= 15) sigType = '⚡ 現貨+合約同時異動';
 else if (volRatio >= 20) sigType = '⚡ 現貨異動';
 else if (volRatio >= 5 && Math.abs(oiChg) >= 15) sigType = '⚡ 合約異動';
+}
 
-// Helpers - 處理 null（無資料）情況顯示 "—"
+// 部分資料失敗時提示
+const failedFetches = [];
+if (!klines15m) failedFetches.push('15m K線');
+if (!klines1h) failedFetches.push('1h K線');
+if (!oiHist) failedFetches.push('OI 歷史');
+if (!lsData) failedFetches.push('多空比');
+if (!frHist) failedFetches.push('資費歷史');
+if (!takerFut) failedFetches.push('合約Taker');
+if (!takerSpot) failedFetches.push('現貨Taker');
+
 const fmtTk = (arr) => {
 if (!arr || !arr.length) return null;
 return arr.map(r => {
@@ -485,10 +507,10 @@ return `<span class="${cls}">${pct}%</span>`;
 };
 
 const now = new Date().toLocaleTimeString('zh-TW');
-
 const tkFutLast = lastValid(tkFut);
 const tkSpotLast = lastValid(tkSpot);
 
+// 渲染
 res.innerHTML = `
 <div class="card">
 <div class="card-header">
@@ -502,33 +524,36 @@ ${sigType ? `<div style="font-size:12px;color:var(--accent);margin-top:4px;">${s
 </div>
 </div>
 
+${failedFetches.length > 0 ? `<div class="warn-banner">⚠️ 部分資料抓取失敗：${failedFetches.join('、')}（顯示為 N/A）。按 F12 查 Console 看詳細錯誤。</div>` : ''}
+
 <div class="grid2">
 <div class="metric">
 <div class="metric-label">成交量倍率（15m）</div>
-<div class="metric-val ${volRatio>=20?'pos':volRatio>=5?'amber':''}">${fmt(volRatio,1)}x</div>
+<div class="metric-val ${volRatio!==null&&volRatio>=20?'pos':volRatio!==null&&volRatio>=5?'amber':''}">${volRatio===null?'N/A':fmt(volRatio,1)+'x'}</div>
 <div class="metric-sub">24H: $${(vol24h/1e6).toFixed(1)}M</div>
 </div>
 <div class="metric">
 <div class="metric-label">OI 變化（15m）</div>
-<div class="metric-val ${oiChg>15?'pos':oiChg<-15?'neg':''}">${oiChg>=0?'+':''}${fmt(oiChg,2)}%</div>
+<div class="metric-val ${oiChg!==null&&oiChg>15?'pos':oiChg!==null&&oiChg<-15?'neg':''}">${oiChg===null?'N/A':(oiChg>=0?'+':'')+fmt(oiChg,2)+'%'}</div>
 </div>
 <div class="metric">
 <div class="metric-label">ADX 趨勢強度</div>
-<div class="metric-val ${adx>=25?'pos':adx<15?'neg neutral':'amber'}">${adx}</div>
-<div class="metric-sub">${adx>=25?'💪 強趨勢':adx>=15?'📊 弱趨勢':'⚪ 盤整'}</div>
+<div class="metric-val ${adx===null?'neutral':adx>=25?'pos':adx<15?'neg neutral':'amber'}">${adx===null?'N/A':adx}</div>
+<div class="metric-sub">${adx===null?'資料不足':adx>=25?'💪 強趨勢':adx>=15?'📊 弱趨勢':'⚪ 盤整'}</div>
 </div>
 <div class="metric">
 <div class="metric-label">多空比</div>
-<div class="metric-val ${ls&&ls>2?'neg':ls&&ls<0.5?'pos':''}">${ls?fmt(ls,2):'N/A'}</div>
-<div class="metric-sub">${ls?(ls>2.0?'⚠️ 散戶極端偏多':ls<0.5?'🔥 偏空（逼空）':'均衡'):'—'}</div>
+<div class="metric-val ${ls&&ls>2?'neg':ls&&ls<0.5?'pos':''}">${ls===null?'N/A':fmt(ls,2)}</div>
+<div class="metric-sub">${ls===null?'—':(ls>2.0?'⚠️ 散戶極端偏多':ls<0.5?'🔥 偏空（逼空）':'均衡')}</div>
 </div>
 </div>
 
 <div class="section-title">資金費率（近3期結算）</div>
+${frRates.length > 0 ? `
 <div class="fr-timeline">
 ${frRates.map(r=>`<div class="fr-pill ${r>0.01?'pos':r<-0.005?'neg':''}" style="${r>0.01?'border-color:rgba(45,206,137,0.3)':r<-0.005?'border-color:rgba(244,67,54,0.3)':''}">${r>=0?'+':''}${r.toFixed(4)}%</div>`).join('<span class="fr-arrow">→</span>')}
-<span style="font-size:12px;color:var(--muted);margin-left:4px;">${frTrend}</span>
-</div>
+${frTrend ? `<span style="font-size:12px;color:var(--muted);margin-left:4px;">${frTrend}</span>` : ''}
+</div>` : '<div style="color:var(--muted);font-size:12px;">N/A</div>'}
 
 <div class="section-title">Taker 比率（近3筆 5m，買入%）</div>
 <div style="margin-bottom:0.5rem">
