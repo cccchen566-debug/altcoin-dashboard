@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>山寨幣監控 · 指標使用手冊</title>
+<style>
+:root {
+--bg: #0a0a0f;
+--surface: #12121a;
+--surface2: #1a1a26;
+--border: rgba(255,255,255,0.08);
+--text: #e8e8f0;
+--muted: #6b6b8a;
+--accent: #7c6af0;
+--green: #2dce89;
+--red: #f44336;
+--amber: #ffb74d;
+--blue: #42a5f5;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+background: var(--bg);
+color: var(--text);
+font-family: system-ui, -apple-system, sans-serif;
+min-height: 100vh;
+padding: 2rem 1rem;
+line-height: 1.6;
+}
+code, .mono {
+font-family: 'SF Mono', 'Fira Code', Menlo, monospace;
+font-size: 0.9em;
+}
+.container { max-width: 1000px; margin: 0 auto; }
+header {
+margin-bottom: 2.5rem;
+padding-bottom: 1.5rem;
+border-bottom: 1px solid var(--border);
+}
+.eyebrow {
+font-family: 'SF Mono', monospace;
+font-size: 11px;
+letter-spacing: 0.2em;
+color: var(--muted);
+text-transform: uppercase;
+margin-bottom: 0.5rem;
+}
+h1 {
+font-size: 28px;
+font-weight: 300;
+letter-spacing: -0.02em;
+margin-bottom: 0.5rem;
+}
+h1 span { color: var(--accent); font-weight: 500; }
+.intro {
+font-size: 14px;
+color: var(--muted);
+max-width: 700px;
+}
+.toc {
+background: var(--surface);
+border: 1px solid var(--border);
+border-radius: 10px;
+padding: 1rem 1.25rem;
+margin-bottom: 2rem;
+display: flex;
+flex-wrap: wrap;
+gap: 0.5rem;
+}
+.toc-label {
+width: 100%;
+font-family: 'SF Mono', monospace;
+font-size: 11px;
+letter-spacing: 0.1em;
+color: var(--muted);
+text-transform: uppercase;
+margin-bottom: 0.5rem;
+}
+.toc a {
+color: var(--text);
+text-decoration: none;
+font-size: 12px;
+padding: 0.25rem 0.6rem;
+border-radius: 5px;
+background: var(--surface2);
+border: 1px solid var(--border);
+transition: all 0.15s;
+}
+.toc a:hover { border-color: var(--accent); color: var(--accent); }
+
+.indicator {
+background: var(--surface);
+border: 1px solid var(--border);
+border-radius: 12px;
+padding: 1.5rem 1.75rem;
+margin-bottom: 1.25rem;
+scroll-margin-top: 1rem;
+}
+.indicator-header {
+display: flex;
+align-items: baseline;
+justify-content: space-between;
+margin-bottom: 1.25rem;
+padding-bottom: 0.75rem;
+border-bottom: 1px solid var(--border);
+flex-wrap: wrap;
+gap: 0.5rem;
+}
+.indicator-title {
+font-size: 20px;
+font-weight: 500;
+letter-spacing: -0.01em;
+}
+.indicator-title .num {
+color: var(--accent);
+font-family: 'SF Mono', monospace;
+font-weight: 400;
+margin-right: 0.4rem;
+}
+.indicator-source {
+font-family: 'SF Mono', monospace;
+font-size: 11px;
+color: var(--muted);
+}
+
+.block {
+margin-bottom: 1rem;
+}
+.block:last-child { margin-bottom: 0; }
+.block-label {
+font-family: 'SF Mono', monospace;
+font-size: 10px;
+letter-spacing: 0.15em;
+color: var(--muted);
+text-transform: uppercase;
+margin-bottom: 0.4rem;
+display: flex;
+align-items: center;
+gap: 0.4rem;
+}
+
+.range-table {
+border-collapse: separate;
+border-spacing: 0;
+width: 100%;
+font-size: 13px;
+}
+.range-table td {
+padding: 0.45rem 0.75rem;
+border-bottom: 1px solid var(--border);
+}
+.range-table tr:last-child td { border-bottom: none; }
+.range-table td.val {
+font-family: 'SF Mono', monospace;
+width: 35%;
+font-weight: 500;
+}
+.range-table td.desc { color: var(--text); }
+
+.signal-grid {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 0.5rem;
+}
+@media (max-width: 600px) {
+.signal-grid { grid-template-columns: 1fr; }
+}
+.signal-item {
+background: var(--surface2);
+border-radius: 7px;
+padding: 0.6rem 0.8rem;
+font-size: 13px;
+border-left: 2px solid var(--border);
+}
+.signal-item.bull { border-left-color: var(--green); }
+.signal-item.bear { border-left-color: var(--red); }
+.signal-item.warn { border-left-color: var(--amber); }
+.signal-item.info { border-left-color: var(--blue); }
+.signal-item-title {
+font-family: 'SF Mono', monospace;
+font-size: 11px;
+color: var(--muted);
+letter-spacing: 0.05em;
+margin-bottom: 0.2rem;
+}
+
+.pos { color: var(--green); font-weight: 500; }
+.neg { color: var(--red); font-weight: 500; }
+.amber { color: var(--amber); font-weight: 500; }
+.muted { color: var(--muted); }
+.bullet {
+padding-left: 1.25rem;
+position: relative;
+margin-bottom: 0.35rem;
+font-size: 13px;
+}
+.bullet::before {
+content: '→';
+position: absolute;
+left: 0;
+color: var(--accent);
+font-family: 'SF Mono', monospace;
+}
+.bullet:last-child { margin-bottom: 0; }
+.bullet code {
+background: var(--surface2);
+padding: 1px 5px;
+border-radius: 3px;
+font-size: 12px;
+}
+
+.callout {
+background: rgba(124,106,240,0.08);
+border-left: 3px solid var(--accent);
+border-radius: 6px;
+padding: 0.75rem 1rem;
+font-size: 13px;
+margin-top: 0.75rem;
+}
+.callout-title {
+font-family: 'SF Mono', monospace;
+font-size: 10px;
+letter-spacing: 0.15em;
+color: var(--accent);
+text-transform: uppercase;
+margin-bottom: 0.3rem;
+}
+
+.combo-section {
+background: linear-gradient(180deg, var(--surface), var(--surface2));
+border: 1px solid var(--accent);
+border-radius: 12px;
+padding: 1.5rem 1.75rem;
+margin: 2rem 0 1.25rem;
+}
+.combo-section h2 {
+font-size: 18px;
+font-weight: 500;
+margin-bottom: 1rem;
+color: var(--accent);
+}
+.quadrant {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 0.75rem;
+margin-top: 1rem;
+}
+@media (max-width: 600px) {
+.quadrant { grid-template-columns: 1fr; }
+}
+.quadrant-cell {
+background: var(--surface);
+border-radius: 8px;
+padding: 0.9rem 1rem;
+border: 1px solid var(--border);
+}
+.quadrant-cell.bull { border-color: rgba(45,206,137,0.4); }
+.quadrant-cell.bear { border-color: rgba(244,67,54,0.4); }
+.quadrant-cell.warn { border-color: rgba(255,183,77,0.4); }
+.quadrant-axis {
+font-family: 'SF Mono', monospace;
+font-size: 11px;
+color: var(--muted);
+letter-spacing: 0.1em;
+margin-bottom: 0.4rem;
+}
+.quadrant-name {
+font-weight: 500;
+margin-bottom: 0.3rem;
+font-size: 14px;
+}
+.quadrant-desc {
+font-size: 12px;
+color: var(--text);
+}
+
+footer {
+margin-top: 3rem;
+padding-top: 1.5rem;
+border-top: 1px solid var(--border);
+text-align: center;
+font-size: 12px;
+color: var(--muted);
+}
+footer a {
+color: var(--accent);
+text-decoration: none;
+}
+footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+<div class="eyebrow">Indicator Manual</div>
+<h1>山寨幣監控 <span>指標使用手冊</span></h1>
+<p class="intro">這份手冊整理 Bot 與 Dashboard 用到的每個指標：它在算什麼、數值怎麼讀、什麼狀況該警示、什麼狀況該忽略、跟其他指標怎麼合看。所有判讀都是統計傾向，不是必然走勢。</p>
+</header>
+
+<div class="toc">
+<div class="toc-label">目錄</div>
+<a href="#vol">① 成交量倍率</a>
+<a href="#oi">② OI 變化</a>
+<a href="#adx">③ ADX 趨勢強度</a>
+<a href="#ls">④ 多空比</a>
+<a href="#fr">⑤ 資金費率</a>
+<a href="#fr-trend">⑥ 資費結算趨勢</a>
+<a href="#taker-fut">⑦ 合約 Taker</a>
+<a href="#taker-spot">⑧ 現貨 Taker</a>
+<a href="#chain">⑨ 鏈上指標</a>
+<a href="#combo">⑩ OI×價格 四象限</a>
+</div>
+
+<!-- ① 成交量倍率 -->
+<section class="indicator" id="vol">
+<div class="indicator-header">
+<div class="indicator-title"><span class="num">①</span>成交量倍率（Volume Ratio）</div>
+<div class="indicator-source mono">15m K-line · index[7] quoteVolume</div>
+</div>
+
+<div class="block">
+<div class="block-label">📐 定義</div>
+<div>當前 15m K 線的計價成交量，除以過去 7 天同週期（15m）的平均成交量。值 = <code>1.0x</code> 代表完全跟均量一樣。Bot 用「7 天歷史均量」當基線，避免單日基線被當日活動污染。</div>
+</div>
+
+<div class="block">
+<div class="block-label">📊 數值區間</div>
+<table class="range-table">
+<tr><td class="val muted">0.5x – 2x</td><td class="desc">正常波動，無訊號</td></tr>
+<tr><td class="val">2x – 5x</td><td class="desc">輕度放量，值得觀察但不夠警報</td></tr>
+<tr><td class="val amber">5x – 10x</td><td class="desc">明顯資金進場（軌 B 門檻）</td></tr>
+<tr><td class="val pos">10x – 20x</td><td class="desc">強烈異動，多數警報的水位</td></tr>
+<tr><td class="val pos">&gt; 20x</td><td class="desc">極端放量（軌 A 觸發，現貨帶動）</td></tr>
+</table>
+</div>
+
+<div class="block">
+<div class="block-label">🟢🔴 訊號意義</div>
+<div class="signal-grid">
+<div class="signal-item bull">
+<div class="signal-item-title">放量 + 價漲</div>
+健康突破，新買盤進場
+</div>
+<div class="signal-item bear">
+<div class="signal-item-title">放量 + 價跌</div>
+拋售或恐慌，避免接刀
+</div>
+<div class="signal-item warn">
+<div class="signal-item-title">放量但無價動</div>
+大戶試盤或洗盤，方向待定
+</div>
+<div class="signal-item info">
+<div class="signal-item-title">配合 OI 變化</div>
+詳見第 ⑩ 節「OI×價格 四象限」
+</div>
+</div>
+</div>
+
+<div class="block">
+<div class="block-label">⚠️ 常見陷阱</div>
+<div class="bullet">冷門幣的均量基數太低，<code>10x</code> 可能只是幾萬鎂進出，沒實際意義（Bot 用 <code>24H quoteVolume &gt; $10M</code> 過濾）</div>
+<div class="bullet">部分山寨幣有 wash trading 灌水，倍率漂亮但實際無人接盤</div>
+<div class="bullet">資費結算前後（每 8H 整點附近）OI 套利倉位調整會帶來短期放量，屬正常</div>
+</div>
+</section>
+
+<!-- ② OI 變化 -->
+<section class="indicator" id="oi">
+<div class="indicator-header">
+<div class="indicator-title"><span class="num">②</span>OI 變化（Open Interest）</div>
+<div class="indicator-source mono">futures/data/openInterestHist · 15m or 1h period</div>
+</div>
+
+<div class="block">
+<div class="block-label">📐 定義</div>
+<div>未平倉合約名目價值的時段變化（%）。OI 上升 = 有新倉位在開（不論多空），OI 下降 = 倉位在平。OI 衡量「合約市場有多少錢在賭」，不衡量方向 — 方向必須跟價格結合解讀。</div>
+</div>
+
+<div class="block">
+<div class="block-label">📊 數值區間</div>
+<table class="range-table">
+<tr><td class="val muted">±5% 內</td><td class="desc">正常波動</td></tr>
+<tr><td class="val amber">±5% – 10%</td><td class="desc">注意水位</td></tr>
+<tr><td class="val">±10% – 15%</td><td class="desc">明顯資金進出</td></tr>
+<tr><td class="val pos">&gt; +15%</td><td class="desc">合約資金大量進場（軌 B 上限門檻）</td></tr>
+<tr><td class="val neg">&lt; -15%</td><td class="desc">大規模平倉</td></tr>
+</table>
+</div>
+
+<div class="block">
+<div class="block-label">🟢🔴 訊號意義</div>
+<div class="signal-grid">
+<div class="signal-item bull">
+<div class="signal-item-title">OI↑ 價↑</div>
+新多進場，強勢趨勢
+</div>
+<div class="signal-item bear">
+<div class="signal-item-title">OI↑ 價↓</div>
+新空進場，看跌共識
+</div>
+<div class="signal-item warn">
+<div class="signal-item-title">OI↓ 價↑</div>
+空頭平倉（軋空），缺乏跟風易回落
+</div>
+<div class="signal-item info">
+<div class="signal-item-title">OI↓ 價↓</div>
+多頭止損，恐慌賣壓但無新空，可能反彈
+</div>
+</div>
+</div>
+
+<div class="block">
+<div class="block-label">⚠️ 常見陷阱</div>
+<div class="bullet">OI 是「總和」而非「淨值」，無法區分多空各自的開倉量</div>
+<div class="bullet">需要跟 <em>價格方向</em> + <em>多空比</em> 三者合看才有意義</div>
+<div class="bullet">資費結算（每 8H）前後 OI 變動可能來自套利倉位調整</div>
+</div>
+</section>
+
+<!-- ③ ADX -->
+<section class="indicator" id="adx">
+<div class="indicator-header">
+<div class="indicator-title"><span class="num">③</span>ADX 趨勢強度（Wilder 14）</div>
+<div class="indicator-source mono">15m (instant_alert) / 1h (定期報告、Dashboard)</div>
+</div>
+
+<div class="block">
+<div class="block-label">📐 定義</div>
+<div>Average Directional Index，由 Welles Wilder 設計的趨勢強度指標。範圍 0-100，<strong>只衡量「強不強」，不衡量「漲還是跌」</strong>。用 14 期 Wilder Smoothing 平滑 TR、+DM、-DM 後計算。</div>
+<div class="callout">
+<div class="callout-title">註：時間框架差異</div>
+Bot 即時警報用 <code>15m ADX</code>（對齊 15m 暴量觸發框架），定期報告與 Dashboard 用 <code>1h ADX</code>（市場概覽用途）。同一幣這兩個值會不一樣，是時間框架選擇，不是計算錯誤。
+</div>
+</div>
+
+<div class="block">
+<div class="block-label">📊 數值區間</div>
+<table class="range-table">
+<tr><td class="val muted">0 – 15</td><td class="desc">盤整無趨勢，不適合追勢交易（Bot 警報過濾門檻）</td></tr>
+<tr><td class="val amber">15 – 25</td><td class="desc">弱趨勢，方向若有確立可入場</td></tr>
+<tr><td class="val pos">25 – 50</td><td class="desc">強趨勢，趨勢策略勝率高的區間</td></tr>
+<tr><td class="val pos">&gt; 50</td><td class="desc">極強趨勢，留意過熱反轉</td></tr>
+</table>
+</div>
+
+<div class="block">
+<div class="block-label">🟢🔴 訊號意義</div>
+<div class="signal-grid">
+<div class="signal-item bull">
+<div class="signal-item-title">ADX 上升</div>
+趨勢加強，跟現有方向同向操作
+</div>
+<div class="signal-item warn">
+<div class="signal-item-title">ADX 下降</div>
+趨勢轉弱，可能進入盤整
+</div>
+<div class="signal-item info">
+<div class="signal-item-title">ADX 過濾噪音</div>
+&lt; 15 時跳過警報，避開盤整中的假突破
+</div>
+<div class="signal-item bear">
+<div class="signal-item-title">ADX 不指示方向</div>
+必須搭配價格走勢，ADX 50 可能是強漲也可能是強跌
+</div>
+</div>
+</div>
+
+<div class="block">
+<div class="block-label">⚠️ 常見陷阱</div>
+<div class="bullet">ADX 是<strong>滯後指標</strong>：急速暴漲後 ADX 可能還 &lt; 15（因為前面盤整太久），這時 Bot 會誤過濾掉</div>
+<div class="bullet">完整的趨勢方向需要 +DI / -DI（目前 Bot/Dashboard 未呈現，只用 ADX 的強度）</div>
+</div>
+</section>
+
+<!-- ④ 多空比 -->
+<section class="indicator" id="ls">
+<div class="indicator-header">
+<div class="indicator-title"><span class="num">④</span>多空比（Long/Short Account Ratio）</div>
+<div class="indicator-source mono">futures/data/globalLongShortAccountRatio</div>
+</div>
+
+<div class="block">
+<div class="block-label">📐 定義</div>
+<div>幣安「全市場帳戶」中做多帳戶數 / 做空帳戶數。<strong>是反向指標</strong> — 散戶極端偏向某邊時，市場通常往反向走。注意：是<em>帳戶比</em>而非<em>倉位比</em>，所以小資金散戶會放大數字。</div>
+</div>
+
+<div class="block">
+<div class="block-label">📊 數值區間</div>
+<table class="range-table">
+<tr><td class="val muted">0.8 – 1.5</td><td class="desc">均衡，無顯著情緒</td></tr>
+<tr><td class="val">1.5 – 2.0</td><td class="desc">偏多，謹慎做多</td></tr>
+<tr><td class="val neg">&gt; 2.0</td><td class="desc">散戶極端偏多（反向訊號 → 看跌）</td></tr>
+<tr><td class="val pos">&lt; 0.5</td><td class="desc">散戶極端偏空（反向訊號 → 看漲）</td></tr>
+</table>
+</div>
+
+<div class="block">
+<div class="block-label">🟢🔴 訊號意義（與 OI 合看，Bot 的 reasons 邏輯）</div>
+<div class="signal-grid">
+<div class="signal-item bear">
+<div class="signal-item-title">LS &gt; 2.0 + OI↑</div>
+🚨 散戶頂部追多，主力可能準備砸盤
+</div>
+<div class="signal-item warn">
+<div class="signal-item-title">LS &gt; 2.0 + OI↓</div>
+🪤 套牢盤平倉，反彈乏力
+</div>
+<div class="signal-item bull">
+<div class="signal-item-title">LS &lt; 0.5 + OI↑</div>
+🔥 主力逼空訊號，看漲
+</div>
+<div class="signal-item info">
+<div class="signal-item-title">LS &lt; 0.5 + OI↓</div>
+📉 空單退場，可能止跌
+</div>
+</div>
+</div>
+
+<div class="block">
+<div class="block-label">⚠️ 常見陷阱</div>
+<div class="bullet">「帳戶比」放大散戶聲音 — 100 個小單戶 vs 1 個大戶的帳戶數一樣是 100:1</div>
+<div class="bullet">主流幣（BTC/ETH）這個值較不敏感，山寨幣才會看到極端值</div>
+<div class="bullet">必須跟 OI 變化合看，單看 LS 容易誤判</div>
+</div>
+</section>
+
+<!-- ⑤ 資金費率 -->
+<section class="indicator" id="fr">
+<div class="indicator-header">
+<div class="indicator-title"><span class="num">⑤</span>資金費率（Funding Rate, Current）</div>
+<div class="indicator-source mono">fapi/v1/premiumIndex · lastFundingRate</div>
+</div>
+
+<div class="block">
+<div class="block-label">📐 定義</div>
+<div>幣安永續合約每 8 小時結算一次的成本：正費率時做多者付給做空者，負費率時相反。設計目的是讓合約價貼近現貨價。資費高 = 合約相對現貨溢價多 = 做多擁擠。</div>
+</div>
+
+<div class="block">
+<div class="block-label">📊 數值區間（每期）</div>
+<table class="range-table">
+<tr><td class="val muted">±0.01% 內</td><td class="desc">中性，無顯著傾向</td></tr>
+<tr><td class="val amber">+0.01% – +0.05%</td><td class="desc">偏多情緒，正常牛市區間</td></tr>
+<tr><td class="val neg">&gt; +0.05%</td><td class="desc">擁擠多頭警示（年化 &gt; 55%，不可持續）</td></tr>
+<tr><td class="val pos">&lt; -0.01%</td><td class="desc">偏空，做多有「補貼」</td></tr>
+<tr><td class="val pos">&lt; -0.05%</td><td class="desc">擁擠空頭（罕見，通常出現在大跌後）</td></tr>
+</table>
+</div>
+
+<div class="block">
+<div class="block-label">🟢🔴 訊號意義</div>
+<div class="signal-grid">
+<div class="signal-item bear">
+<div class="signal-item-title">高正費率 + 價滯漲</div>
+多頭尾聲，反轉風險高
+</div>
+<div class="signal-item bull">
+<div class="signal-item-title">負費率 + 價止跌</div>
+做空擁擠，反彈機率高
+</div>
+<div class="signal-item warn">
+<div class="signal-item-title">費率快速跳升</div>
+短線過熱，準備震盪洗盤
+</div>
+<div class="signal-item info">
+<div class="signal-item-title">穩定低正</div>
+健康牛市背景，不需特別警示
+</div>
+</div>
+</div>
+
+<div class="block">
+<div class="block-label">⚠️ 常見陷阱</div>
+<div class="bullet"><code>0.05%</code> 每 8H = 年化 55% 持倉成本，短期可以維持很久但長期必崩</div>
+<div class="bullet">資費是<strong>同步指標</strong>而非領先 — 它反映當下情緒，不預測未來</div>
+<div class="bullet">結算前 1-2 小時資費可能短暫飆高，是套利機會但不代表趨勢</div>
+</div>
+</section>
+
+<!-- ⑥ 資費結算趨勢 -->
+<section class="indicator" id="fr-trend">
+<div class="indicator-header">
+<div class="indicator-title"><span class="num">⑥</span>資費結算趨勢（近 3 期）</div>
+<div class="indicator-source mono">fapi/v1/fundingRate · limit=3</div>
+</div>
+
+<div class="block">
+<div class="block-label">📐 定義</div>
+<div>最近 3 期已結算的資費（共 24 小時）。差距 &gt; 0.002% 算上升 / 下降。把資費當時序資料看，比單看當前資費更能掌握情緒變化方向。</div>
+</div>
+
+<div class="block">
+<div class="block-label">🟢🔴 訊號意義</div>
+<div class="signal-grid">
+<div class="signal-item bull">
+<div class="signal-item-title">📈 上升 + 價漲</div>
+情緒加溫，趨勢延續
+</div>
+<div class="signal-item warn">
+<div class="signal-item-title">📈 上升 + 價滯漲</div>
+警示！多頭擁擠頂部
+</div>
+<div class="signal-item info">
+<div class="signal-item-title">📉 下降 + 價漲</div>
+健康突破，去槓桿後再漲
+</div>
+<div class="signal-item bear">
+<div class="signal-item-title">📉 下降 + 價跌</div>
+多頭離場，下跌中
+</div>
+</div>
+</div>
+
+<div class="block">
+<div class="block-label">⚠️ 常見陷阱</div>
+<div class="bullet">1 期 = 8 小時，所以「3 期趨勢」反映的是過去 24 小時的情緒變化，不是短期</div>
+<div class="bullet">劇烈行情中（一夜暴漲暴跌）3 期可能不夠，最新資費的絕對值更有意義</div>
+</div>
+</section>
+
+<!-- ⑦ 合約 Taker -->
+<section class="indicator" id="taker-fut">
+<div class="indicator-header">
+<div class="indicator-title"><span class="num">⑦</span>合約 Taker 比率</div>
+<div class="indicator-source mono">futures/data/takerlongshortRatio · 5m</div>
+</div>
+
+<div class="block">
+<div class="block-label">📐 定義</div>
+<div>5 分鐘 K 線內，「主動買入量 / 總成交量」。Taker = 吃單方（用市價單買賣的人），Maker = 掛單方。Taker 買入比高代表市場有人「不等價、立刻要」買進，是主動需求的訊號。Bot 取最近 3 筆 5m 看趨勢。</div>
+</div>
+
+<div class="block">
+<div class="block-label">📊 數值區間</div>
+<table class="range-table">
+<tr><td class="val">~50%</td><td class="desc">中性，買賣力道均衡</td></tr>
+<tr><td class="val pos">&gt; 60%</td><td class="desc">🟢 主動買盤強，看漲</td></tr>
+<tr><td class="val neg">&lt; 40%</td><td class="desc">🔴 主動賣盤強，看跌</td></tr>
+<tr><td class="val muted">40% – 60%</td><td class="desc">⚪ 中性</td></tr>
+</table>
+</div>
+
+<div class="block">
+<div class="block-label">🟢🔴 訊號意義（趨勢解讀）</div>
+<div class="signal-grid">
+<div class="signal-item bull">
+<div class="signal-item-title">🟢 → 🟢 → 🟢</div>
+持續買入動能，趨勢明確
+</div>
+<div class="signal-item warn">
+<div class="signal-item-title">🟢 → ⚪ → 🔴</div>
+動能消失，反轉中
+</div>
+<div class="signal-item bull">
+<div class="signal-item-title">🔴 → ⚪ → 🟢</div>
+反轉啟動，買盤回來
+</div>
+<div class="signal-item bear">
+<div class="signal-item-title">🔴 → 🔴 → 🔴</div>
+持續賣壓，避免做多
+</div>
+</div>
+</div>
+
+<div class="block">
+<div class="block-label">⚠️ 常見陷阱</div>
+<div class="bullet">5m 太短雜訊大 — 單筆數字參考價值低，<strong>3 筆趨勢</strong>才是重點</div>
+<div class="bullet">如果跟現貨 Taker 同向 = 真實共識；如果分歧（合約強現貨弱）= 純合約炒作，容易回吐</div>
+</div>
+</section>
+
+<!-- ⑧ 現貨 Taker -->
+<section class="indicator" id="taker-spot">
+<div class="indicator-header">
+<div class="indicator-title"><span class="num">⑧</span>現貨 Taker 比率</div>
+<div class="indicator-source mono">api/v3/klines · index[9]/index[5]</div>
+</div>
+
+<div class="block">
+<div class="block-label">📐 定義</div>
+<div>從幣安現貨 5m K 線估算：<code>takerBuyBaseVolume / totalVolume</code>。意義跟合約 Taker 一樣，但反映的是<strong>現貨市場的真實需求</strong>，不是合約槓桿炒作。</div>
+</div>
+
+<div class="block">
+<div class="block-label">🟢🔴 訊號意義（搭配合約 Taker 解讀）</div>
+<div class="signal-grid">
+<div class="signal-item bull">
+<div class="signal-item-title">現貨🟢 + 合約🟢</div>
+真實買盤 + 槓桿放大，最強多頭結構
+</div>
+<div class="signal-item warn">
+<div class="signal-item-title">現貨⚪ + 合約🟢</div>
+散戶 FOMO 槓桿炒作，缺乏真實買盤
+</div>
+<div class="signal-item bear">
+<div class="signal-item-title">現貨🔴 + 合約🟢</div>
+現貨在賣 + 合約逼空，極不穩定，易急跌
+</div>
+<div class="signal-item bear">
+<div class="signal-item-title">現貨🔴 + 合約🔴</div>
+全面看跌，避開
+</div>
+</div>
+</div>
+
+<div class="block">
+<div class="block-label">⚠️ 常見陷阱</div>
+<div class="bullet">部分「幣安上線」的山寨幣只有 Alpha 或合約，沒上現貨主站 → 現貨 Taker 顯示 N/A 是正常的</div>
+<div class="bullet">現貨成交量比合約小很多，雜訊比例較高</div>
+<div class="bullet">如果現貨無資料但合約有警報，特別要謹慎 — 沒有真實買盤背書</div>
+</div>
+</section>
+
+<!-- ⑨ 鏈上指標 -->
+<section class="indicator" id="chain">
+<div class="indicator-header">
+<div class="indicator-title"><span class="num">⑨</span>鏈上指標（前 10 錢包、持倉人數、流動性）</div>
+<div class="indicator-source mono">Moralis ERC20 holders / pairs API</div>
+</div>
+
+<div class="block">
+<div class="block-label">📐 定義</div>
+<div>透過 CoinGecko 自動偵測幣種所在鏈，從 Moralis 拿到去除交易所熱錢包與銷毀地址後的<strong>真實散戶分佈</strong>。SOL 鏈目前 Moralis 不支援。</div>
+</div>
+
+<div class="block">
+<div class="block-label">📊 數值區間 - 前 10 錢包佔比</div>
+<table class="range-table">
+<tr><td class="val pos">&lt; 20%</td><td class="desc">分散良好，籌碼健康</td></tr>
+<tr><td class="val amber">20% – 40%</td><td class="desc">集中度偏高，留意</td></tr>
+<tr><td class="val neg">&gt; 40%</td><td class="desc">少數錢包控盤，砸盤風險高</td></tr>
+</table>
+</div>
+
+<div class="block">
+<div class="block-label">📊 數值區間 - 持倉人數</div>
+<table class="range-table">
+<tr><td class="val neg">&lt; 1,000</td><td class="desc">超低，操控風險極高</td></tr>
+<tr><td class="val amber">1,000 – 10,000</td><td class="desc">發展中，可關注但需謹慎</td></tr>
+<tr><td class="val pos">&gt; 10,000</td><td class="desc">相對健康，散戶分佈足夠</td></tr>
+</table>
+</div>
+
+<div class="block">
+<div class="block-label">📊 數值區間 - 流動性（DEX）</div>
+<table class="range-table">
+<tr><td class="val neg">&lt; $100K</td><td class="desc">枯竭，slippage 嚴重</td></tr>
+<tr><td class="val amber">$100K – $1M</td><td class="desc">可用但易受影響</td></tr>
+<tr><td class="val pos">&gt; $1M</td><td class="desc">相對穩定</td></tr>
+</table>
+</div>
+
+<div class="block">
+<div class="block-label">⚠️ 常見陷阱</div>
+<div class="bullet">CoinGecko 對小幣的鏈識別可能誤判（同名幣多時）— Bot 會優先選 market cap rank 高的</div>
+<div class="bullet">交易所熱錢包雖然被過濾，但 LP 池、橋的合約地址可能仍出現在前 10 名</div>
+<div class="bullet">CEX 上的籌碼分佈看不到，鏈上數字只是部分真相</div>
+</div>
+</section>
+
+<!-- ⑩ OI × 價格 四象限 -->
+<section class="combo-section" id="combo">
+<h2>⑩ 綜合判讀：OI × 價格 四象限</h2>
+<p style="font-size:13px;color:var(--muted);margin-bottom:0.5rem;">這是<strong>最重要的組合解讀工具</strong>。OI 跟價格的關係能告訴你「資金是進場還是離場」、「方向是新單帶動還是平倉造成」。</p>
+
+<div class="quadrant">
+<div class="quadrant-cell bull">
+<div class="quadrant-axis">OI ↑ &nbsp; · &nbsp; 價 ↑</div>
+<div class="quadrant-name">🚀 新多進場</div>
+<div class="quadrant-desc">健康趨勢，買盤付錢、新單推升價格。可以順勢做多，但要看資費別過熱。</div>
+</div>
+<div class="quadrant-cell bear">
+<div class="quadrant-axis">OI ↑ &nbsp; · &nbsp; 價 ↓</div>
+<div class="quadrant-name">📉 新空進場</div>
+<div class="quadrant-desc">健康下跌，賣盤主動、新空單推低價格。可順勢做空，避免接刀。</div>
+</div>
+<div class="quadrant-cell warn">
+<div class="quadrant-axis">OI ↓ &nbsp; · &nbsp; 價 ↑</div>
+<div class="quadrant-name">⚡ 空頭軋空</div>
+<div class="quadrant-desc">價漲是因為空單被打爆平倉，<strong>不是新買盤推升</strong>。容易回落，做多要快進快出。</div>
+</div>
+<div class="quadrant-cell warn">
+<div class="quadrant-axis">OI ↓ &nbsp; · &nbsp; 價 ↓</div>
+<div class="quadrant-name">😱 多頭止損</div>
+<div class="quadrant-desc">價跌是多單恐慌平倉，<strong>沒有新空進場</strong>。空方未承接，反彈機率高。</div>
+</div>
+</div>
+
+<div class="callout" style="margin-top:1rem;">
+<div class="callout-title">⚖️ 使用建議</div>
+看到警報時，先問：價格在動嗎？OI 在動嗎？這兩個方向是<em>同向</em>還是<em>反向</em>？同向（左上 / 右下）是<strong>趨勢延續</strong>訊號；反向（右上 / 左下）是<strong>位置不穩</strong>訊號。然後再用多空比、Taker、資費去精修判斷。
+</div>
+</section>
+
+<!-- 使用流程建議 -->
+<section class="combo-section">
+<h2>🎯 警報判讀建議流程</h2>
+<div class="bullet"><strong>① 看 Vol：</strong>是不是夠大（≥ 5x），且 24H 交易量真的有量（避開洗盤幣）</div>
+<div class="bullet"><strong>② 看 OI × 價：</strong>對照第 ⑩ 節四象限，先定基本方向</div>
+<div class="bullet"><strong>③ 看 ADX：</strong>≥ 15 才有趨勢可言，&lt; 15 多半是盤整噪音</div>
+<div class="bullet"><strong>④ 看 多空比：</strong>有沒有極端值（&gt; 2 或 &lt; 0.5）暗示反向機會</div>
+<div class="bullet"><strong>⑤ 看 資費：</strong>絕對值高（&gt; 0.05%）= 擁擠警示；趨勢上升 + 價滯漲 = 頂部風險</div>
+<div class="bullet"><strong>⑥ 看 Taker：</strong>現貨跟合約方向一致 = 真實共識；分歧 = 純炒作要謹慎</div>
+<div class="bullet"><strong>⑦ 看 鏈上：</strong>前 10 錢包 &lt; 40%、流動性 &gt; $100K，這幣才值得追</div>
+</section>
+
+<footer>
+山寨幣監控系統 · 指標手冊 v1.0 · 配套 Bot v2.1.2 / Dashboard v2.1.2
+<br><br>
+<a href="index.html">← 返回 Dashboard</a>
+</footer>
+
+</div>
+</body>
+</html>
